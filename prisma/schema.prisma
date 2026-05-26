@@ -7,8 +7,365 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────
+
+enum Role {
+  ADMIN
+  COLLECTOR
+  MEMBER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum TontineStatus {
+  EN_COURS
+  TERMINEE
+  SUSPENDUE
+  ANNULEE
+}
+
+enum CaseStatus {
+  IMPAYE
+  PAYE
+  PARTIEL
+  RETARD
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// ─────────────────────────────────────
+// USER
+// ─────────────────────────────────────
+
 model User {
-  id    String @id @default(cuid())
-  email String @unique
-  name  String?
+  id        String     @id @default(cuid())
+
+  nom       String
+  prenom    String
+  email     String?    @unique
+  phone     String     @unique
+  password  String?
+  avatar    String?
+
+  role      Role
+  status    UserStatus @default(ACTIVE)
+
+  isVerified Boolean   @default(false)
+
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  collector     Collector?
+  sessions      Session[]
+  refreshTokens RefreshToken[]
+  otpCodes      OtpCode[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+// ─────────────────────────────────────
+// COLLECTOR
+// ─────────────────────────────────────
+
+model Collector {
+  id     String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  zone            String?
+  phone           String?
+  address         String?
+  commissionRate  Float   @default(5.0)
+  isActive        Boolean @default(false)
+  isApproved      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members   Member[]
+  tontines  Tontine[]
+  payments  Payment[]
+}
+
+// ─────────────────────────────────────
+// MEMBER
+// ─────────────────────────────────────
+
+model Member {
+  id          String @id @default(cuid())
+
+  collectorId String
+  collector   Collector @relation(fields: [collectorId], references: [id])
+
+  nom        String
+  prenom     String
+  phone      String
+  quartier   String?
+  profession String?
+  photo      String?
+
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tontines    Tontine[]
+  payments    Payment[]
+  carnetCases CarnetCase[]
+  withdrawals Withdrawal[]
+}
+
+// ─────────────────────────────────────
+// TONTINE
+// ─────────────────────────────────────
+
+model Tontine {
+  id          String @id @default(cuid())
+
+  memberId    String
+  member      Member    @relation(fields: [memberId], references: [id])
+
+  collectorId String
+  collector   Collector @relation(fields: [collectorId], references: [id])
+
+  name        String
+  description String?
+
+  dailyAmount    Float
+  duration       Int
+  commissionRate Float @default(5.0)
+
+  startDate DateTime
+  endDate   DateTime
+
+  status TontineStatus @default(EN_COURS)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  carnetCases CarnetCase[]
+  payments    Payment[]
+  withdrawals Withdrawal[]
+}
+
+// ─────────────────────────────────────
+// CARNET CASE — cœur du projet
+// ─────────────────────────────────────
+
+model CarnetCase {
+  id       String @id @default(cuid())
+
+  tontineId String
+  tontine   Tontine @relation(fields: [tontineId], references: [id])
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+
+  dayNumber      Int
+  expectedDate   DateTime
+  expectedAmount Float
+  paidAmount     Float    @default(0)
+
+  status CaseStatus @default(IMPAYE)
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  payments Payment[]
+
+  @@unique([tontineId, dayNumber])
+}
+
+// ─────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────
+
+model Payment {
+  id String @id @default(cuid())
+
+  caseId String
+  case   CarnetCase @relation(fields: [caseId], references: [id])
+
+  tontineId String
+  tontine   Tontine @relation(fields: [tontineId], references: [id])
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+
+  collectorId String
+  collector   Collector @relation(fields: [collectorId], references: [id])
+
+  amount        Float
+  paymentMethod String?
+  reference     String?
+  note          String?
+
+  status PaymentStatus @default(PENDING)
+
+  paidAt    DateTime  @default(now())
+  createdAt DateTime  @default(now())
+}
+
+// ─────────────────────────────────────
+// WITHDRAWAL
+// ─────────────────────────────────────
+
+model Withdrawal {
+  id String @id @default(cuid())
+
+  tontineId String
+  tontine   Tontine @relation(fields: [tontineId], references: [id])
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+
+  amount Float
+  reason String?
+  status String?
+
+  approvedBy  String?
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// ─────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────
+
+model RefreshToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OtpCode {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  code      String
+  type      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  device       String?
+  ipAddress    String?
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+// ─────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────
+
+model Notification {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title   String
+  message String
+  type    NotificationType @default(INFO)
+  isRead  Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  action    String
+  entity    String
+  entityId  String?
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────
+
+model Setting {
+  id       String @id @default(cuid())
+
+  appName  String
+  appLogo  String?
+  currency String  @default("XOF")
+  country  String?
+
+  supportEmail    String?
+  maintenanceMode Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────
+// REPORT
+// ─────────────────────────────────────
+
+model Report {
+  id          String @id @default(cuid())
+
+  generatedBy String
+  type        String
+  fileUrl     String?
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  createdAt DateTime @default(now())
 }
