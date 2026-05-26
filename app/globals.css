@@ -1,17 +1,12 @@
 @import "tailwindcss";
 
+/* 🎨 Variables globales */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* 🌙 Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,8 +14,66 @@
   }
 }
 
+/* 🧠 Tailwind theme variables */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* 🔤 Fonts */
+  --font-google-sans: var(--font-google-sans);
+  --font-inter-tight: var(--font-inter-tight);
+  --font-lexend-deca: var(--font-lexend-deca);
+  --font-hanken-grotesk: var(--font-hanken-grotesk);
+
+  /* 🧩 Font principale */
+  --font-sans: var(--font-google-sans);
+}
+
+/* 🌍 Base globale */
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+
+  /* 🔤 Font par défaut */
+
+
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-google {
+  font-family: var(--font-google-sans), sans-serif;
+}
+
+.font-inter-tight {
+  font-family: var(--font-inter-tight), sans-serif;
+}
+
+.font-lexend {
+  font-family: var(--font-lexend-deca), sans-serif;
+}
+
+.font-hanken {
+  font-family: var(--font-hanken-grotesk), sans-serif;
+}
+
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  font-family: var(--font-lexend-deca), sans-serif;
+}
+
+span {
+  font-family: var(--font-google-sans), sans-serif;
+}
+
+p{
+  font-family: var(--font-inter-tight), sans-serif;
 }
