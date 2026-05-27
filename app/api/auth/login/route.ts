@@ -106,6 +106,27 @@ export async function POST(req: NextRequest) {
                         )
                 }
 
+                // Après la vérification du mot de passe
+                // Ajouter ce bloc avant la génération des tokens
+
+                // ✅ Vérifier que le compte est vérifié
+                if (!user.isVerified) {
+                        return NextResponse.json(
+                                {
+                                        success: false,
+                                        message: "Compte non vérifié. Vérifiez votre email.",
+                                        data: {
+                                                // On retourne le userId pour que le frontend
+                                                // puisse appeler /api/auth/send-otp directement
+                                                userId: user.id,
+                                                isVerified: false,
+                                                action: "VERIFY_EMAIL",
+                                        },
+                                },
+                                { status: 403 }
+                        )
+                }
+
                 // 7️⃣ Si c'est un collecteur
                 //    vérifier qu'il est approuvé par l'admin
                 if (user.role === "COLLECTOR" && !user.collector?.isApproved) {
