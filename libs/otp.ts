@@ -22,13 +22,13 @@ export function generateOtpCode(): string {
 
 export async function sendOtpEmail(
   email: string,
-  code:  string,
-  nom:   string
+  code: string,
+  nom: string
 ): Promise<boolean> {
   try {
     await resend.emails.send({
-      from:    "AutoGo <onboarding@resend.dev>",
-      to:      email,
+      from: "AutoGo <onboarding@resend.dev>",
+      to: email,
       subject: `${code} — Votre code de vérification AutoGo`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
@@ -87,8 +87,8 @@ export async function sendOtpEmail(
 
 export async function saveOtpCode(
   userId: string,
-  code:   string,
-  type:   string
+  code: string,
+  type: string
 ): Promise<void> {
 
   // Supprimer les anciens OTP du même type
